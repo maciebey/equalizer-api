@@ -1,11 +1,42 @@
-const {google} = require('googleapis');
+const { google } = require('googleapis');
 const express = require('express');
+const cors = require('cors');
 const app = express();
 
-const PORT = process.env.PORT || 8000;
+// https://dustinpfister.github.io/2018/01/28/heroku-cors/
+conf = {
+  port: process.env.PORT || 8000,
+  originUndefined: function (req, res, next) {
+    if (!req.headers.origin) {
+      res.json({
+        mess: 'Hi you are visiting the service locally. If this was a CORS the origin header should not be undefined'
+      })
+    } else {
+      next();
+    }
+  },
+
+  // Cross Origin Resource Sharing Options
+  cors: {
+    origin: function (origin, cb) {
+      // setup a white list
+      let wl = ['http://eq.mbdv.io', 'https://eq.mbdv.io'];
+
+      if (wl.indexOf(origin) != -1) {
+        cb(null, true);
+      } else {
+        cb(new Error('invalid origin: ' + origin), false);
+      }
+    },
+    optionsSuccessStatus: 200
+  }
+
+}
+
+app.use(conf.originUndefined, cors(conf.cors));
 
 const apiKey = process.env.GAPIKEY
-const yt = google.youtube({version: 'v3', auth: apiKey})
+const yt = google.youtube({ version: 'v3', auth: apiKey })
 
 const searchRequest = (query, pageToken) => {
   return new Promise((resolve, reject) => {
@@ -20,9 +51,9 @@ const searchRequest = (query, pageToken) => {
 
     const request = yt.search.list(params)
 
-    request.then((data)=>{
+    request.then((data) => {
       resolve(data)
-    }).catch((err)=>{
+    }).catch((err) => {
       reject(err)
     })
   })
@@ -42,4 +73,4 @@ const tyQueryController = async (req, res) => {
 app.get('/:YtQueryString', tyQueryController);
 app.get('/:YtQueryString/:PageToken', tyQueryController);
 
-app.listen(PORT, () => console.log(`Server is running on PORT ${PORT}`));
+app.listen(conf.port, () => console.log(`Server is running on PORT ${conf.port}`));
